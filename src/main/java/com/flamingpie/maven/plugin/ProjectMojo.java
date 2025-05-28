@@ -1,9 +1,12 @@
 package com.flamingpie.maven.plugin;
 
+import org.apache.maven.model.FileSet;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -11,18 +14,20 @@ import org.apache.velocity.app.VelocityEngine;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 @Mojo(name = "project")
 public class ProjectMojo extends AbstractMojo
 {
+    @Parameter(defaultValue = "${project}", required = true, readonly = true)
+    private MavenProject mavenProject;
     private final VelocityEngine velocityEngine = new VelocityEngine();
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException
     {
+        if (!mavenProject.isExecutionRoot())
+            return;
         // Парсим pom.xml с параметрами для плагина (по сути это параметры конфигурации сразу будут здесь доступны в виде полей)
         initVelocity();
         // Создаем директорию .idea если она не создана
@@ -34,6 +39,14 @@ public class ProjectMojo extends AbstractMojo
        vcsContext.put("vcs", "svn");
 
        createFileIfNotExists(writeToTemplate("templates/vcs.vm", vcsContext), "./.idea/vcs.xml");
+
+       List<String> projects = mavenProject.getCollectedProjects()
+               .stream().map(MavenProject::getResources)
+               .flatMap(Collection::stream).map(FileSet::getDirectory).toList();
+       Map<String, Object> encodingsContext = new HashMap<>();
+       encodingsContext.put("encoding", "UTF-8");
+       encodingsContext.put("moduleURIs", projects);
+       createFileIfNotExists(writeToTemplate("templates/encodings.vm", encodingsContext), "./.idea/encodings.xml");
 
         // Тут развилка, если нужно полностью пересоздать, то удаляем все файлы и пересоздаем по шаблону
 

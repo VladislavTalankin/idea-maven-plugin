@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+  #foreach($moduleURI in $moduleURIs)
+    <file url="$moduleURI" charset="$encoding" />
+  #end
+    <file url="PROJECT" charset="$encoding" />
+  </component>
+</project>
